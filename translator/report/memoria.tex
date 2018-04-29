@@ -1,0 +1,377 @@
+\documentclass{article}
+\usepackage[spanish]{babel}
+\usepackage[utf8]{inputenc}
+% \usepackage{enumitem}
+\usepackage{listings}
+% \usepackage{xcolor}
+
+\title{Conocimiento y Razonamiento Automatizado: Implementación de una Gramática de Clausulas Definidas en Prolog}
+\author{Carlos Javier Tacón Fernández} 
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Introducción }
+El lenguaje natural, en cualquier idioma, se compone de muchas estructuras gramaticales y sintácticas diferentes, 
+con reglas flexibles para la formación de oraciones y concordancia en diferentes aspectos morfológicos de las palabras. \\
+
+En esta práctica se explora una forma de traducción basada en la evaluación de estructuras sintácticas 
+en oraciones usando gramáticas en español e inglés, haciendo la correspondencia entre unas estructuras 
+u otras dependiendo de las características específicas del idioma.
+
+\section{Grupos Gramaticales}
+Tanto en español como en inglés se han definido los mismos grupos gramaticales, pero estos idiomas no tienen 
+la misma estructura así que se han manejado dos gramáticas diferentes, que aún teniendo prácticamente las 
+mismas definiciones, su desarrollo es diferente:
+\begin{itemize}
+    \item \textbf{Oración.} Es la estructura sintáctica más global que se va a analizar, se compone de un grupo nominal y un grupo 
+    preposicional en su forma más común. En español podemos omitir el sujeto en todas las ocasiones, pero en inglés no podemos 
+    omitirlo salvo excepciones (oraciones coordinadas, por ejemplo), así que las reglas varían en este caso.
+    \item \textbf{Oración relativo (subordinada).} Una oración que es parte de un grupo nominal más amplio, añadida con una conjunción 
+    de subordinación, que en inglés se puede omitir, así que en inglés tendremos dos reglas diferentes para esta estructura, con y sin 
+    conjunción. En castellano no omitimos esta conjunción así que solo escribiremos una regla.
+    \item \textbf{Oración conjuntiva (coordinada).} Una oración que es precedida un nexo o conjunción coordinada y que forma parte de 
+    otra oración, en este caso es similar en ambos idiomas.
+    \item \textbf{Grupo nominal.} Formado por un nombre, pudiendo también tener un determinante y un adjetivo. También puede ser un 
+    pronombre, que hace referencia a algo sustituyéndolo. El orden de un adjetivo que acompañe a un nombre es opuesto en inglés y español,
+    pero el resto de casos son muy parecidos
+    \item \textbf{Grupo preposicional.} Un grupo nominal precedido por una preposición. En el caso de la preposición \textit{a}, esta puede
+    ser omitida en inglés en algunas ocasiones así que este idioma tendrá una regla específica para la posibilidad de omitirla.
+    \item \textbf{Grupo verbal.} Simboliza la acción del grupo nominal sujeto, tiene la misma estructura en ambos idiomas, pudiendo 
+    ser solo un verbo o verbo más un complemento que puede ser un grupo nominal, preposicional, adjetival o adverbial.
+    \item \textbf{Grupo adjetival.} Define las cualidades de un nombre, en inglés esta estructura se localiza antes del nombre 
+    y en castellano después, las reglas son diferentes. Puede ser precedido de un grupo adverbial.
+    \item \textbf{Grupo adverbial.} Modifica un nombre o un adjetivo, en ambos idiomas tiene la misma estructura, en este caso 
+    recursiva ya que puede haber varios adverbios que modifiquen a un solo objeto.
+\end{itemize}
+
+\section{Reglas de Concordancia}
+Las reglas de concordancia morfológica presentan algunas diferencias entre los idiomas español e inglés. Las características que estos 
+dos lenguajes comparten es la concordancia de persona entre el sujeto y el verbo (en este caso el sujeto es un grupo nominal 
+que será tercera persona a no ser que esté formado por un pronombre, que tiene implícita la representación de una persona 
+específica), además de la concordancia en número. 
+
+El castellano es un lenguaje segregado por género, tanto los determinantes como los pronombres, nombres, adverbios y adjetivos 
+tienen género además de número. Esta diferenciación de género no está presente en inglés así que en el programa, solo el castellano 
+tendrá que comprobar esa concordancia.
+\begin{itemize}
+    \item Misma persona y número entre el grupo nominal con el grupo verbal que representan sujeto y predicado.
+    \item Mismo género y número entre determinante, nombre y adjetivos.
+\end{itemize}
+
+El inglés tiene la paricularidad de tener un determinante artículo indeterminado diferente dependiendo de si la palabra 
+siguiente empieza por vocal o consonante, esto no ocurre en castellano, así que solo tendremos que comprobarlo en inglés.
+\begin{itemize}
+    \item Misma persona y número entre el grupo nominal con el grupo verbal que representan sujeto y predicado.
+    \item Mismo número entre determinante y nombre.
+    \item Dependiendo de si la siguiente palabra es vocal o consonante se utilizará \textit{a} o \textit{an}.
+\end{itemize}
+
+
+\section{Traducción de oraciones de ejemplo}
+Al traducir oraciones de español a inglés, como hemos hecho dos gramáticas que funcionan de forma bidireccional, podemos observar 
+que en la gramática española tenemos esta regla: 
+
+\begin{lstlisting}[breaklines=true, language=Prolog]
+    g_nominal_basico(gnb(Nom), 3, Genero, Numero) -->
+    determinante(det(art_det), _, Genero, Numero), nombre(Nom, Genero, Numero, c).
+\end{lstlisting}
+
+En la que un artículo determinado más un nombre puede funcionar solo como nombre en inglés 
+[el,alumno,ama,la,universidad]=[the,student,loves,university] esto hace que muchas frases omitan el artículo de su sujeto (no es 
+erróneo, los titulares de periódicos tienen esta estructura), haciendo que haya algunas traducciones menos naturales, incluso 
+erróneas en algunos casos. \\
+
+Como tenemos que tener en cuenta casos específicos, para resolver un problema en un caso generamos muchas
+más opciones de traducción, algunas alternativas correctas, pero otras gramaticalmente erróneas. Tendríamos que hacer muchas 
+reglas para controlar todo. \\
+
+Las frases traducidas de español a inglés quedan de esta manera (en negrita la mejor):
+
+\begin{itemize}
+    \item 01 [el,hombre,come,una,manzana]
+    \begin{itemize}
+        \item A - [man,eats,an,apple]
+        \item B - \textbf{[the,man,eats,an,apple]}
+    \end{itemize}
+
+    \item 02 [ellos,comen,manzanas]
+    \begin{itemize}
+        \item A - \textbf{[they,eat,some,apples]}
+        \item B - [they,eat,apples]
+    \end{itemize}
+
+    \item 03 [tu,comes,una,manzana,roja]
+    \begin{itemize}
+        \item A - \textbf{[you,eat,a,red,apple]}
+    \end{itemize}
+
+    \item 04 [juan,ama,a,maria]
+    \begin{itemize}
+        \item A - \textbf{[john,loves,mary]}
+    \end{itemize}
+
+    \item 05 [el,gato,grande,come,un,raton,gris]
+    \begin{itemize}
+        \item A - [the,big,cat,eats,a,grey,mouse]
+        \item B - \textbf{[the,large,cat,eats,a,grey,mouse]}
+    \end{itemize}
+
+    \item 06 [juan,estudia,en,la,universidad]
+    \begin{itemize}
+        \item A - [john,studies,at,university]
+        \item B - [john,studies,in,university]
+        \item C - \textbf{[john,studies,at,the,university]}
+        \item D - [john,studies,in,the,university]
+    \end{itemize}
+
+    \item 07 [el,alumno,ama,la,universidad]
+    \begin{itemize}
+        \item A - [student,loves,university]
+        \item B - [student,loves,the,university]
+        \item C - \textbf{[the,student,loves,university]}
+        \item D - [the,student,loves,the,university]
+    \end{itemize}
+
+    \item 08 [el,perro,persiguio,un,gato,negro,en,el,jardin]
+    \begin{itemize}
+        \item A - [dog,chased,a,black,cat,at,garden]
+        \item B - [dog,chased,a,black,cat,in,garden]
+        \item C - [dog,chased,a,black,cat,at,the,garden]
+        \item D - [dog,chased,a,black,cat,in,the,garden]
+        \item E - [the,dog,chased,a,black,cat,at,garden]
+        \item F - [the,dog,chased,a,black,cat,in,garden]
+        \item G - [the,dog,chased,a,black,cat,at,the,garden]
+        \item H - \textbf{[the,dog,chased,a,black,cat,in,the,garden]}
+    \end{itemize}
+
+    \item 09 [la,universidad,es,grande]
+    \begin{itemize}
+        \item A - [university,is,big]
+        \item B - [university,is,large]
+        \item C - [the,university,is,big]
+        \item D - \textbf{[the,university,is,large]}
+    \end{itemize}
+
+    \item 10 [el,hombre,que,vimos,ayer,es,mi,vecino]
+    \begin{itemize}
+        \item A - [man,saw,yesterday,is,my,neighbour]
+        \item B - [man,we,saw,yesterday,is,my,neighbour]
+        \item C - [man,that,saw,yesterday,is,my,neighbour]
+        \item D - [man,that,we,saw,yesterday,is,my,neighbour]
+        \item E - [the,man,saw,yesterday,is,my,neighbour]
+        \item F - \textbf{[the,man,we,saw,yesterday,is,my,neighbour]}
+        \item G - [the,man,that,saw,yesterday,is,my,neighbour]
+        \item H - \textbf{[the,man,that,we,saw,yesterday,is,my,neighbour]}
+    \end{itemize}
+
+    \item 11 [el,canario,amarillo,canta,muy,bien]
+    \begin{itemize}
+        \item A - \textbf{[the,yellow,canary,sings,very,well]}
+    \end{itemize}
+
+    \item 12 [juan,toma,un,cafe,y,lee,el,periodico]
+    \begin{itemize}
+        \item A - [john,has,a,coffee,and,reads,newspaper]
+        \item B - [john,has,a,coffee,and,he,reads,newspaper]
+        \item C - [john,has,a,coffee,and,she,reads,newspaper]
+        \item D - [john,has,a,coffee,and,it,reads,newspaper]
+        \item E - \textbf{[john,has,a,coffee,and,reads,the,newspaper]}
+        \item F - [john,has,a,coffee,and,he,reads,the,newspaper]
+        \item G - [john,has,a,coffee,and,she,reads,the,newspaper]
+        \item H - [john,has,a,coffee,and,it,reads,the,newspaper]
+    \end{itemize}
+
+    \item 13 [juan,es,delgado,y,maria,es,alta]
+    \begin{itemize}
+        \item A - \textbf{[john,is,thin,and,mary,is,tall]}
+    \end{itemize}
+
+    \item 14 [oscar,wilde,escribio,el,fantasma,de,canterville]
+    \begin{itemize}
+        \item A - \textbf{[oscar,wilde,wrote,the,canterville,ghost]}
+    \end{itemize}
+
+\end{itemize}
+
+En el caso de traducir de español a inglés nos encontramos con otros problemas, el más común es poner la preposición \textit{a} donde
+no debería escribirse. En la gramática inglesa hemos escrito esta regla:
+
+\begin{lstlisting}[breaklines=true, language=Prolog]
+    g_preposicional_en(gp(prep(a), GN)) --> g_nominal_en(GN, _, _, s).
+\end{lstlisting}
+
+Así podemos soportar [john,loves,mary]=[juan,ama,a,maria]. El problema es que añadimos errores 
+a muchas otras frases, la solución podría ser concretar más esa regla para que tenga concordancia solo con algunos verbos 
+o estructuras. \\
+
+Las frases traducidas de inglés a español quedan de esta manera (en negrita la mejor):
+
+\begin{itemize}
+    \item 01 [the,man,eats,an,apple]
+    \begin{itemize}
+        \item A - \textbf{[el,hombre,come,una,manzana]}
+        \item B - [el,hombre,come,a,una,manzana]
+    \end{itemize}
+
+    \item 02 [they,eat,some,apples]
+    \begin{itemize}
+        \item A - [comen,manzanas]
+        \item B - [comen,las,manzanas]
+        \item C - [comen,algunas,manzanas]
+        \item D - \textbf{[ellos,comen,manzanas]}
+        \item E - [ellos,comen,las,manzanas]
+        \item F - [ellas,comen,manzanas]
+        \item G - [ellas,comen,las,manzanas]
+        \item H - [ellos,comen,algunas,manzanas]
+        \item I - [ellas,comen,algunas,manzanas]
+    \end{itemize}
+
+    \item 03 [you,eat,a,red,apple]
+    \begin{itemize}
+        \item A - [comes,una,manzana,roja]
+        \item B - [comes,a,una,manzana,roja]
+        \item C - \textbf{[tu,comes,una,manzana,roja]}
+        \item D - [tu,comes,a,una,manzana,roja]
+    \end{itemize}
+
+    \item 04 [john,loves,mary]
+    \begin{itemize}
+        \item A - [juan,ama,maria]
+        \item B - \textbf{[juan,ama,a,maria]}
+    \end{itemize}
+
+    \item 05 [the,big,cat,eats,a,grey,mouse]
+    \begin{itemize}
+        \item A - \textbf{[el,gato,grande,come,un,raton,gris]}
+        \item B - [el,gato,grande,come,a,un,raton,gris]
+    \end{itemize}
+
+    \item 06 [john,studies,at,the,university]
+    \begin{itemize}
+        \item A - \textbf{[juan,estudia,en,la,universidad]}
+    \end{itemize}
+
+    \item 07 [the,student,loves,university]
+    \begin{itemize}
+        \item A - [el,alumno,ama,universidad]
+        \item B - \textbf{[el,alumno,ama,la,universidad]}
+        \item C - [el,alumno,ama,a,universidad]
+        \item D - [el,alumno,ama,a,la,universidad]
+    \end{itemize}
+
+    \item 08 [the,dog,chased,a,black,cat,in,the,garden]
+    \begin{itemize}
+        \item A - \textbf{[el,perro,persiguio,un,gato,negro,en,el,jardin]}
+    \end{itemize}
+
+    \item 09 [the,university,is,large]
+    \begin{itemize}
+        \item A - \textbf{[la,universidad,es,grande]}
+    \end{itemize}
+
+    \item 10 [the,man,we,saw,yesterday,is,my,neighbour]
+    \begin{itemize}
+        \item A - \textbf{[el,hombre,que,vimos,ayer,es,mi,vecino]}
+        \item B - [el,hombre,que,vimos,ayer,es,a,mi,vecino]
+        \item C - [el,hombre,que,nosotros,vimos,ayer,es,mi,vecino]
+        \item D - [el,hombre,que,nosotras,vimos,ayer,es,mi,vecino]
+        \item E - [el,hombre,que,nosotros,vimos,ayer,es,a,mi,vecino]
+        \item F - [el,hombre,que,nosotras,vimos,ayer,es,a,mi,vecino]
+    \end{itemize}
+
+    \item 11 [the,yellow,canary,sings,very,well]
+    \begin{itemize}
+        \item A - \textbf{[el,canario,amarillo,canta,muy,bien]}
+    \end{itemize}
+
+    \item 12 [john,has,a,coffee,and,reads,the,newspaper]
+    \begin{itemize}
+        \item A - \textbf{[juan,toma,un,cafe,y,lee,el,periodico]}
+        \item B - [juan,toma,un,cafe,y,lee,a,el,periodico]
+        \item C - [juan,toma,a,un,cafe,y,lee,el,periodico]
+        \item D - [juan,toma,a,un,cafe,y,lee,a,el,periodico]
+    \end{itemize}
+
+    \item 13 [john,is,thin,and,mary,is,tall]
+    \begin{itemize}
+        \item A - \textbf{[juan,es,delgado,y,maria,es,alta]}
+    \end{itemize}
+
+    \item 14 [oscar,wilde,wrote,the,canterville,ghost]
+    \begin{itemize}
+        \item A - \textbf{[oscar,wilde,escribio,el,fantasma,de,canterville]}
+        \item B - [oscar,wilde,escribio,a,el,fantasma,de,canterville]
+    \end{itemize}
+
+\end{itemize}
+
+
+\section{Ajustes para soportar estructuras naturales}
+Como ya hemos visto en el apartado anterior, al generar muchas reglas específicas para casos concretos podemos acabar 
+contaminando otras respuestas. Una solución que podemos pensar a priori es utilizar dos gramáticas de cada lenguaje, una 
+que se usaría para enviar y otra para recibir, donde podamos definir con más solutura algunas reglas estructurales que pueden 
+servir para esquematizar frases pero en ningún caso para construir frases válidas. \\
+
+En el caso concreto anterior, si eliminamos la regla de la gramática española que añade el determinante, al traducir de español a inglés no tendremos esos sujetos omitidos en los resultados.
+Al igual que si eliminamos la regla que añade la preposición \textit{a} en la gramática inglesa, al traducir español no tendríamos esa preposición creando estructuras erróneas. \\
+
+Otra solución es trabajar las reglas para conseguir una concordancia más estricta, que podamos usar para definir gran parte 
+de las reglas gramaticales del idioma y evitar errores. Podemos imaginar que sería muy costoso ser totalmente riguroso para 
+trabajar con todas las reglas gramaticales y sintácticas de un lenguaje natural. \\
+
+En el caso concreto que se plantea, si en inglés el verbo \textit{comer} en presente se utiliza en la forma continua podemos 
+añadir esas palabras al diccionario y construir reglas de concordancia para que grupos verbales que usen esos verbos en español
+en tiempo presente, usen tiempo contínuo en inglés, además de controlar la concordancia de las formas del verbo ser o estar. \\
+
+Otra solución más fácil (aunque peor) es añadir el verbo ser al verbo comer en forma contínua en el diccionario, de esta manera, 
+realizando los cambios:
+
+\begin{lstlisting}[breaklines=true, language=Prolog]
+    verbo(v(v_3), presente, 3, s) --> [come].
+    verbo(v(v_4), presente, 2, s) --> [comes].
+    verbo(v(v_5), presente, 3, p) --> [comen].
+
+    verbo_en(v(v_2), presente, 3, s) --> [sings].
+    verbo_en(v(v_3), presente, 3, s) --> [is,eating].
+    verbo_en(v(v_4), presente, 2, s) --> [are,eating].
+    verbo_en(v(v_5), presente, 3, p) --> [are,eating].
+\end{lstlisting}
+
+\begin{itemize}
+    \item 01 [el,hombre,come,una,manzana]
+    \begin{itemize}
+        \item A - \textbf{[the,man,is,eating,an,apple]}
+    \end{itemize}
+    
+    \item 02 [ellos,comen,manzanas]    
+    \begin{itemize}
+        \item A - \textbf{[they,are,eating,some,apples]}
+        \item A - [they,are,eating,apples]
+    \end{itemize}
+
+    \item 03 [tu,comes,una,manzana,roja]
+    \begin{itemize}
+        \item A - \textbf{[you,are,eating,a,red,apple]}
+    \end{itemize}
+
+    \item 05 [el,gato,grande,come,un,raton,gris]
+    \begin{itemize}
+        \item A - \textbf{[the,big,cat,is,eating,a,grey,mouse]}
+        \item A - [the,large,cat,is,eating,a,grey,mouse]
+    \end{itemize}
+
+\end{itemize}
+
+
+\section{Conclusiones}
+Podemos observar que este método, aunque pueda funcionar con más o menos soltura para un diccionario específico aplicado a 
+unas frases de prueba, definir con reglas todas las posibles variantes del lenguaje natural para consultas de traducción más complejas 
+puede ser costoso y difícil, ya que añadir una regla para una traducción específica puede perjudicar a otras reglas 
+que antes funcionaban devolviendo resultados mejores, en estos ejemplos ha ocurrido. Si la solución es poner reglas muy específicas 
+para casos concretos perdemos la eficiencia del sistema, tenemos que tener en cuenta que si una traducción busca objetividad, 
+muy pocas reglas deben satisfacerse, así que si el programa engorda habrá muchas más que no se validarán hasta encontrar alguna correcta.
+
+
+\end{document}
